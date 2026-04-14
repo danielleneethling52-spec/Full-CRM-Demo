@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rilukey Booking</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-black text-white p-10">
+
+<h1 class="text-3xl mb-6">Rilukey Booking Demo</h1>
+
+<div id="listings" class="grid grid-cols-2 gap-6"></div>
+
+<!-- MODAL -->
+<div id="modal" class="fixed inset-0 bg-black/90 hidden items-center justify-center">
+<div class="bg-gray-900 p-6 w-[500px]">
+
+<h2 id="mTitle" class="text-xl mb-2"></h2>
+<img id="mImg" class="w-full h-40 object-cover mb-4">
+
+<p id="mCancel" class="text-xs mb-2"></p>
+<p id="mPolicy" class="text-xs mb-4"></p>
+
+<input id="formName" placeholder="Name" class="w-full p-2 mb-2 text-black">
+<input id="formEmail" placeholder="Email" class="w-full p-2 mb-2 text-black">
+<input id="formTel" placeholder="Phone" class="w-full p-2 mb-2 text-black">
+
+<input id="mCheckIn" type="date" class="w-full p-2 mb-2 text-black" onchange="syncFromModal()">
+<input id="mCheckOut" type="date" class="w-full p-2 mb-4 text-black" onchange="syncFromModal()">
+
+<div class="flex gap-2 mb-4">
+<button onclick="setBookingMode(0)" class="bg-gray-700 px-2">Enquiry</button>
+<button id="optHalf" onclick="setBookingMode(0.5)" class="bg-gray-700 px-2">Deposit</button>
+<button onclick="setBookingMode(1)" class="bg-gray-700 px-2">Full</button>
+</div>
+
+<p id="mTotal" class="mb-4 text-xl"></p>
+
+<button onclick="handleBookingAction()" class="bg-green-600 px-4 py-2">Submit</button>
+<button onclick="closeModal()" class="ml-2">Close</button>
+
+</div>
+</div>
+
+<script>
+
+const data = [
+{
+id:1,
+name:"Horizon One",
+img:"https://images.unsplash.com/photo-1613490493576-7fde63acd811",
+cancellation:"Cancel 14 days before arrival",
+policy:"No parties",
+rooms:[{price:85000}]
+}
+];
+
+let selectedPrice = 0;
+let payMultiplier = 0;
+let activeProp = null;
+
+function render(){
+document.getElementById("listings").innerHTML = data.map(p=>`
+<div class="border p-4">
+<img src="${p.img}" class="h-40 w-full object-cover mb-2">
+<h3>${p.name}</h3>
+<button onclick="openModal(${p.id})" class="bg-blue-500 px-2 mt-2">Book</button>
+</div>
+`).join('');
+}
+
+function openModal(id){
+activeProp = data.find(x=>x.id===id);
+
+mTitle.innerText = activeProp.name;
+mImg.src = activeProp.img;
+mCancel.innerText = activeProp.cancellation;
+mPolicy.innerText = activeProp.policy;
+
+selectedPrice = activeProp.rooms[0].price;
+
+modal.classList.remove("hidden");
+modal.classList.add("flex");
+}
+
+function closeModal(){
+modal.classList.add("hidden");
+}
+
+function setBookingMode(m){
+payMultiplier = m;
+calculateTotal();
+}
+
+function syncFromModal(){
+checkBookingWindow();
+calculateTotal();
+}
+
+function checkBookingWindow(){
+const cin = new Date(mCheckIn.value);
+const today = new Date();
+const diff = (cin - today)/86400000;
+
+if(diff < 30){
+optHalf.style.display = "none";
+if(payMultiplier === 0.5) payMultiplier = 0;
+}else{
+optHalf.style.display = "block";
+}
+}
+
+function calculateTotal(){
+const cin = new Date(mCheckIn.value);
+const cout = new Date(mCheckOut.value);
+
+if(cin && cout){
+const nights = (cout-cin)/86400000;
+const total = nights * selectedPrice;
+const display = payMultiplier === 0 ? total : total*payMultiplier;
+mTotal.innerText = "R"+display;
+}
+}
+
+function handleBookingAction(){
+
+const booking = {
+id: Date.now(),
+name: formName.value,
+email: formEmail.value,
+property: activeProp.name,
+startDate: mCheckIn.value,
+endDate: mCheckOut.value,
+amount: selectedPrice,
+paymentType: payMultiplier,
+cancellation: activeProp.cancellation,
+policy: activeProp.policy
+};
+
+let bookings = JSON.parse(localStorage.getItem("rilukey_bookings")) || [];
+bookings.push(booking);
+localStorage.setItem("rilukey_bookings", JSON.stringify(bookings));
+
+alert("Booking Saved!");
+closeModal();
+}
+
+render();
+
+</script>
+
+</body>
+</html>
